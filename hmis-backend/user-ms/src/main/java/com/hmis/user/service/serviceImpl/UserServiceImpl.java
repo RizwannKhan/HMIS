@@ -53,4 +53,10 @@ public class UserServiceImpl implements UserService {
     public void updateUser(UserDto userDto) {
         throw new UnsupportedOperationException("Update user not implemented yet");
     }
+
+    @Override
+    public UserDto getUserByEmail(String email) throws HMSException {
+        User user = userRepository.findByEmail(email).orElseThrow(() -> new HMSException("USER_NOT_FOUND"));
+        return user.toDto();
+    }
 }

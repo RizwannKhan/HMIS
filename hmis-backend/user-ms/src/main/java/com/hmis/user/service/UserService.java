@@ -9,5 +9,6 @@ public interface UserService {
     public UserDto loginUser(UserDto userDto) throws HMSException;
     public UserDto getUserById(Long id) throws HMSException;
     public void updateUser(UserDto userDto);
+    public UserDto getUserByEmail(String email) throws HMSException;
 
 }
