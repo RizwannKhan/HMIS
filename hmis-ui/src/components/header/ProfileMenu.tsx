@@ -1,13 +1,16 @@
 import { Menu, Button, Text, Avatar } from '@mantine/core';
 import { GearSixIcon, MagnifyingGlassIcon, ImageIcon, ChatCircleIcon, TrashIcon, ArrowsLeftRightIcon } from '@phosphor-icons/react';
+import { useEffect } from 'react';
+import { useSelector } from 'react-redux';
 
 const ProfileMenu = () => {
+  const user = useSelector((state: any) => state.user);
   return (
     <Menu shadow="md" width={200}>
       <Menu.Target>
         <div className="flex items-center gap-2 cursor-pointer">
-          <span className='font-medium text-lg text-green-900'>Rocky</span>
-          <Avatar variant='filled' src="Avatar.png" size={'45'} alt="Profile" />
+          <span className='font-medium text-lg text-green-900'>{user.name}</span>
+          <Avatar variant='filled' src="/Avatar.png" size={'45'} alt="Profile" />
         </div>
       </Menu.Target>
 

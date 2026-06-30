@@ -7,44 +7,32 @@ import {
   PulseIcon,
   SquaresFourIcon,
   UserCircleCheckIcon,
+  UserIcon,
 } from "@phosphor-icons/react";
 import React from "react";
+import { useSelector } from "react-redux";
 import { NavLink } from "react-router-dom";
 
 const links = [
   {
     name: "Dashboard",
-    url: "/dashboard",
+    url: "/patient/dashboard",
     icon: <SquaresFourIcon size={32} stroke="1.5" />,
   },
   {
-    name: "Doctors",
-    url: "/doctors",
-    icon: <AsclepiusIcon size={32} stroke="1.5" />,
-  },
-  {
-    name: "Patients",
-    url: "/patients",
-    icon: <UserCircleCheckIcon size={32} stroke="1.5" />,
+    name: "Profile",
+    url: "/patient/profile",
+    icon: <UserIcon size={32} stroke="1.5" />,
   },
   {
     name: "Appointments",
-    url: "/appointments",
+    url: "/patient/appointments",
     icon: <CalendarCheckIcon size={32} stroke="1.5" />,
-  },
-  {
-    name: "Pharmacy",
-    url: "/pharmacy",
-    icon: <PillIcon size={32} stroke="1.5" />,
-  },
-  {
-    name: "Departments",
-    url: "/departments",
-    icon: <BuildingOfficeIcon size={32} stroke="1.5" />,
-  },
+  }
 ];
 
 const Sidebar = () => {
+  const user = useSelector((state: any) => state.user);
   return (
     <div className="flex">
       <div className="w-64"></div>
@@ -58,14 +46,14 @@ const Sidebar = () => {
             <div className="p-1 bg-white rounded-full shadow-lg">
               <Avatar
                 variant="filled"
-                src="Avatar.png"
+                src="/Avatar.png"
                 size={"xl"}
                 alt="Profile"
               />
             </div>
-            <span className="font-medium text-light">Rocky</span>
+            <span className="font-medium text-light">{user.name}</span>
             <Text c="dimmed" size="xs" className="text-light">
-              Admin
+              {user.role}
             </Text>
           </div>
           <div className="flex flex-col gap-1">

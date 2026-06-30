@@ -4,23 +4,29 @@ import com.hmis.user.dto.UserDto;
 import com.hmis.user.entity.User;
 import com.hmis.user.exception.HMSException;
 import com.hmis.user.repository.UserRepository;
+import com.hmis.user.service.ApiService;
 import com.hmis.user.service.UserService;
 import lombok.RequiredArgsConstructor;
+
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(rollbackFor = Exception.class)
 public class UserServiceImpl implements UserService {
 
     private static final Logger log = LoggerFactory.getLogger(UserServiceImpl.class);
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final ApiService apiService;
 
     @Override
     public void registerUser(UserDto userDto) throws HMSException {
@@ -29,6 +35,10 @@ public class UserServiceImpl implements UserService {
             throw new HMSException("USER_ALREADY_EXISTS");
         }
         userDto.setPassword(passwordEncoder.encode(userDto.getPassword()));
+        @Nullable
+        Long profileId = apiService.addProfile(userDto).block();
+        System.out.println("ProfileId : " + profileId);
+        userDto.setProfileId(profileId);
         userRepository.save(userDto.toEntity());
     }
 

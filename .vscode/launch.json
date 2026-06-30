@@ -2,6 +2,12 @@
     "configurations": [
         {
             "type": "java",
+            "name": "ProfileMsApplication",
+            "request": "launch",
+            "mainClass": "com.hms.profile_ms.ProfileMsApplication"
+        },
+        {
+            "type": "java",
             "name": "Spring Boot-GatewayMsApplication<gateway-ms>",
             "request": "launch",
             "cwd": "${workspaceFolder}",
@@ -9,7 +15,7 @@
             "projectName": "gateway-ms",
             "args": "",
             "envFile": "${workspaceFolder}/.env",
-            "vmArgs": " -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=53186 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Dspring.jmx.enabled=true -Djava.rmi.server.hostname=localhost -Dspring.application.admin.enabled=true -Dspring.boot.project.name=gateway-ms"
+            "vmArgs": "-Dspring.jmx.enabled=false -Dspring.application.admin.enabled=false -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=53224 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Djava.rmi.server.hostname=localhost -Dspring.boot.project.name=gateway-ms"
         },
         {
             "type": "java",
@@ -18,6 +24,17 @@
             "cwd": "${workspaceFolder}",
             "mainClass": "com.hmis.user.UserMsApplication",
             "projectName": "user-ms",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env",
+            "vmArgs": " -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=57861 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Dspring.jmx.enabled=true -Djava.rmi.server.hostname=localhost -Dspring.application.admin.enabled=true -Dspring.boot.project.name=user-ms"
+        },
+        {
+            "type": "java",
+            "name": "Spring Boot-ProfileMsApplication<profile-ms>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "com.hmis.profile.ProfileMsApplication",
+            "projectName": "profile-ms",
             "args": "",
             "envFile": "${workspaceFolder}/.env"
         }

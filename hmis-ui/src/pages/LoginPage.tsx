@@ -1,10 +1,22 @@
 import { Button, PasswordInput, TextInput } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { PulseIcon } from "@phosphor-icons/react";
-import React from "react";
-import { Link } from "react-router-dom";
+import React, { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { loginUser } from "../services/UserService";
+import {
+  errorNotification,
+  successNotification,
+} from "../utility/NotificationUtil";
+import { useDispatch } from "react-redux";
+import { setJwt } from "../slices/JwtSlice";
+import { jwtDecode } from "jwt-decode";
+import { setUser } from "../slices/UserSlice";
 
 const LoginPage = () => {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
   const form = useForm({
     initialValues: {
       email: "",
@@ -18,7 +30,25 @@ const LoginPage = () => {
   });
 
   const handleSubmit = (values: typeof form.values) => {
-    console.log(values);
+    //console.log(values);
+    setLoading(true);
+    loginUser(values)
+      .then((_data) => {
+        //console.log(data);
+        //console.log(jwtDecode(_data));
+        const decodedUser: any = jwtDecode(_data);
+        successNotification("Logged in Successfully !!!");
+        // console.log(decodedUser);        
+        //navigate(`${decodedUser?.role?.toLowerCase()}/dashboard`);
+        dispatch(setJwt(_data));
+        dispatch(setUser(decodedUser));
+        // navigate("/dashboard");
+      })
+      .catch((error) => {
+        //console.log(error);
+        const errMsg = error.response?.data?.errorMessage;
+        errorNotification(errMsg);
+      }).finally(() => setLoading(false));
   };
 
   return (
@@ -58,7 +88,7 @@ const LoginPage = () => {
             placeholder="Enter Password"
             {...form.getInputProps("password")}
           />
-          <Button type="submit">Login</Button>
+          <Button loading={loading} type="submit">Login</Button>
           <div className="text-neutral-700 text-sm self-center">
             Don't have an Account?{" "}
             <Link to={"/register"} className="hover:underline">

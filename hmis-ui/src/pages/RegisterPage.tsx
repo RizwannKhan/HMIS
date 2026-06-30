@@ -7,26 +7,47 @@ import {
 import { useForm } from "@mantine/form";
 import { PulseIcon } from "@phosphor-icons/react";
 import React from "react";
-import { Link } from "react-router-dom";
+import { data, Link, useNavigate } from "react-router-dom";
+import { errorNotification, successNotification } from "../utility/NotificationUtil";
+import { resgisterUser } from "../services/UserService";
 
 const RegisterPage = () => {
+  const navigate = useNavigate();
   const form = useForm({
     initialValues: {
-      type: "PATIENT",
+      name: "",
+      role: "PATIENT",
       email: "",
       password: "",
       confirmPassword: "",
     },
 
     validate: {
+      name: (value) => (!value ? "Name is required" : null),
       email: (value) => (/^\S+@\S+$/.test(value) ? null : "Invalid email"),
-      password: (value) => (!value ? "Password is Required" : null),
-      confirmPassword: (value, values) => (value === values.password ? null : "Password didn't matched"),
+      password: (value) =>
+        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&^#()_\-+=])[A-Za-z\d@$!%*?&^#()_\-+=]{8,}$/.test(
+          value,
+        )
+          ? null
+          : "Password must be at least 8 characters long and include at least one uppercase letter, one lowercase letter, one digit, and one special character",
+      confirmPassword: (value, values) =>
+        value === values.password ? null : "Password didn't matched",
     },
   });
 
   const handleSubmit = (values: typeof form.values) => {
-    console.log(values);
+    //console.log(values);
+    resgisterUser(values).then((_data) => {
+      //console.log(data);
+      successNotification("Registered Successfully !!!");
+      navigate("/login");
+    }).catch((error) => {
+      //console.log(error);      
+      const errMsg = error.response?.data?.errorMessage;
+      //errorNotification("Registration Failed !!!");
+      errorNotification(errMsg);
+    });
   };
 
   return (
@@ -54,10 +75,23 @@ const RegisterPage = () => {
           <SegmentedControl
             fullWidth
             size="md"
-            color="#32b9a9" bg={'#cff8ef'}
+            color="#32b9a9"
+            bg={"#cff8ef"}
             className="[&_*]:!text-dark border border-primary-700"
-            data={[{label:'Patient', value:"PATIENT"}, {label:'Doctor', value:"DOCTOR"}, {label:'Admin', value:"ADMIN"}]}
-            {...form.getInputProps("type")}
+            data={[
+              { label: "Patient", value: "PATIENT" },
+              { label: "Doctor", value: "DOCTOR" },
+              { label: "Admin", value: "ADMIN" },
+            ]}
+            {...form.getInputProps("role")}
+          />
+          <TextInput
+            className="transition duration-100"
+            variant="unstyled"
+            size="md"
+            radius={"md"}
+            placeholder="Enter Name"
+            {...form.getInputProps("name")}
           />
           <TextInput
             className="transition duration-100"
