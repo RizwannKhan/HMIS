@@ -47,8 +47,10 @@ public class Doctor {
 
     private Integer totalExp;
 
+    private String avatarUrl;
+
     public DoctorDto toDoctorDto() {
         return new DoctorDto(this.id, this.name, this.email, this.dob, this.phone, this.address, this.licenseNo,
-                this.specialization, this.department, this.totalExp);
+                this.specialization, this.department, this.totalExp, this.avatarUrl);
     }
 }

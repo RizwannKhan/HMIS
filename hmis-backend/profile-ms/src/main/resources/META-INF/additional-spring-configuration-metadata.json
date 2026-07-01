@@ -1,5 +1,12 @@
-{"properties": [{
-  "name": "PATIENT_ALREADY_EXISTS",
-  "type": "java.lang.String",
-  "description": "A description for 'PATIENT_ALREADY_EXISTS'"
-}]}
+{"properties": [
+  {
+    "name": "PATIENT_ALREADY_EXISTS",
+    "type": "java.lang.String",
+    "description": "A description for 'PATIENT_ALREADY_EXISTS'"
+  },
+  {
+    "name": "file.upload-dir",
+    "type": "java.lang.String",
+    "description": "A description for 'file.upload-dir'"
+  }
+]}

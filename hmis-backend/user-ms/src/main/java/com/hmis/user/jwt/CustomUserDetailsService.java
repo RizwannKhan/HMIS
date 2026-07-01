@@ -23,7 +23,7 @@ public class CustomUserDetailsService implements UserDetailsService {
         try {
             UserDto dto = userService.getUserByEmail(email);
             return new CustomUserDetails(dto.getId(), dto.getEmail(), dto.getPassword(), dto.getRole(), dto.getName(),
-                    dto.getEmail(), Collections.emptyList());
+                    dto.getEmail(), dto.getProfileId(), Collections.emptyList());
         } catch (HMSException e) {
             throw new UsernameNotFoundException("User not found with email: " + email);
         }

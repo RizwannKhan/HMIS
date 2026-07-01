@@ -1,8 +1,8 @@
 package com.hmis.profile.dto;
 
-import lombok.Getter;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
 
-@Getter
 public enum BloodGroup {
 
     A_POSITIVE("A+"),
@@ -21,7 +21,13 @@ public enum BloodGroup {
         this.displayName = displayName;
     }
 
+    @JsonValue
+    public String getDisplayName() {
+        return displayName;
+    }
+
     // ✅ Convert "A+" string → Enum (useful when receiving from API/frontend)
+    @JsonCreator
     public static BloodGroup fromString(String value) {
         for (BloodGroup bg : BloodGroup.values()) {
             if (bg.displayName.equalsIgnoreCase(value)) {

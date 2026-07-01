@@ -11,6 +11,7 @@ import org.springframework.security.web.SecurityFilterChain;
 @EnableWebSecurity
 public class SecurityConfig {
 
+    @SuppressWarnings("null")
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         /*http.csrf(AbstractHttpConfigurer::disable)
@@ -21,6 +22,7 @@ public class SecurityConfig {
         return http.build();*/
         http.csrf(AbstractHttpConfigurer::disable)
             .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/static/avatars/**").permitAll()
                 .requestMatchers(request -> "SECRET".equals(request.getHeader("X-Secret-Key")))   
                 .permitAll()
                 .anyRequest().denyAll()

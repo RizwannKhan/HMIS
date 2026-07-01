@@ -51,9 +51,11 @@ public class Patient {
 
     private String chronicDisease;
 
+    private String avatarUrl;
+
     public PatientDto toPatientDto() {
         return new PatientDto(this.id, this.name, this.email, this.dob, this.phone, this.address, this.aadhaarNo,
-                this.bloodGroup, this.allergies, this.chronicDisease);
+                this.bloodGroup, this.allergies, this.chronicDisease, this.avatarUrl);
     }
 
 }

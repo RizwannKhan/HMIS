@@ -2,15 +2,9 @@
     "configurations": [
         {
             "type": "java",
-            "name": "ProfileMsApplication",
-            "request": "launch",
-            "mainClass": "com.hms.profile_ms.ProfileMsApplication"
-        },
-        {
-            "type": "java",
             "name": "Spring Boot-GatewayMsApplication<gateway-ms>",
             "request": "launch",
-            "cwd": "${workspaceFolder}",
+            "cwd": "${workspaceFolder}/hmis-backend/gateway-ms",
             "mainClass": "com.hmis.gateway.GatewayMsApplication",
             "projectName": "gateway-ms",
             "args": "",
@@ -21,7 +15,7 @@
             "type": "java",
             "name": "Spring Boot-UserMsApplication<user-ms>",
             "request": "launch",
-            "cwd": "${workspaceFolder}",
+            "cwd": "${workspaceFolder}/hmis-backend/user-ms",
             "mainClass": "com.hmis.user.UserMsApplication",
             "projectName": "user-ms",
             "args": "",
@@ -32,9 +26,20 @@
             "type": "java",
             "name": "Spring Boot-ProfileMsApplication<profile-ms>",
             "request": "launch",
-            "cwd": "${workspaceFolder}",
+            "cwd": "${workspaceFolder}/hmis-backend/profile-ms",
             "mainClass": "com.hmis.profile.ProfileMsApplication",
             "projectName": "profile-ms",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env",
+            "vmArgs": "-Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=57862 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Dspring.jmx.enabled=true -Djava.rmi.server.hostname=localhost -Dspring.application.admin.enabled=true -Dspring.boot.project.name=profile-ms"
+        },
+        {
+            "type": "java",
+            "name": "Spring Boot-AppointmentMsApplication<appointment-ms>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "com.hmis.appointment.AppointmentMsApplication",
+            "projectName": "appointment-ms",
             "args": "",
             "envFile": "${workspaceFolder}/.env"
         }

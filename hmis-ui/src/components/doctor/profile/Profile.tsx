@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Avatar,
   Badge,
@@ -8,12 +8,44 @@ import {
   Select,
   Textarea,
   NumberInput,
+  Loader,
 } from "@mantine/core";
 import { DateInput } from "@mantine/dates";
 import dayjs from "dayjs";
-import { IconEdit, IconCheck, IconX, IconCamera, IconLock } from "@tabler/icons-react";
-import { DEPARTMENTS, PHONE_PREFIX, SPECIALIZATIONS } from "../../../data/DropdownData";
+import {
+  IconEdit,
+  IconCheck,
+  IconX,
+  IconCamera,
+  IconLock,
+} from "@tabler/icons-react";
+import {
+  DEPARTMENTS,
+  PHONE_PREFIX,
+  SPECIALIZATIONS,
+} from "../../../data/DropdownData";
 import { useSelector } from "react-redux";
+import {
+  getDoctor,
+  updateDoctor,
+  uploadDoctorAvatar,
+} from "../../../services/DoctorProfileService";
+import { errorNotification, successNotification } from "../../../utility/NotificationUtil";
+
+// Mirrors DoctorDto (backend).
+interface DoctorDto {
+  id: number;
+  name: string;
+  email: string;
+  dob: string | null;
+  phone: string;
+  address: string;
+  licenseNo: string | null;
+  specialization: string;
+  department: string;
+  totalExp: number | null;
+  avatarUrl: string | null;
+}
 
 interface Doctor {
   id: number;
@@ -28,6 +60,23 @@ interface Doctor {
   totalExp: number | null;
   avatarUrl: string;
 }
+
+const toDoctor = (dto: DoctorDto, fallbackAvatar = "/Avatar.png"): Doctor => ({
+  id: dto.id,
+  name: dto.name,
+  email: dto.email,
+  dob: dto.dob,
+  phone: dto.phone,
+  address: dto.address,
+  licenseNo: dto.licenseNo,
+  specialization: dto.specialization,
+  department: dto.department,
+  totalExp: dto.totalExp,
+  avatarUrl:
+    dto.avatarUrl && dto.avatarUrl.trim() !== ""
+      ? dto.avatarUrl
+      : fallbackAvatar,
+});
 
 interface InfoRowProps {
   label: string;
@@ -110,14 +159,18 @@ const InfoRow = ({
             <TextInput
               value={(value as string) ?? ""}
               onChange={(e) => {
-                const digitsOnly = e.currentTarget.value.replace(/\D/g, "").slice(0, 10);
+                const digitsOnly = e.currentTarget.value
+                  .replace(/\D/g, "")
+                  .slice(0, 10);
                 onChange?.(digitsOnly);
               }}
               size="xs"
               className="w-full"
               maxLength={10}
               leftSection={
-                <span className="text-sm text-neutral-500 pl-1">{PHONE_PREFIX}</span>
+                <span className="text-sm text-neutral-500 pl-1">
+                  {PHONE_PREFIX}
+                </span>
               }
               leftSectionWidth={42}
             />
@@ -154,29 +207,50 @@ const InfoRow = ({
   );
 };
 
-const dummyDoctor: Doctor = {
-  id: 501,
-  name: "Dr. Nisha Verma",
-  email: "nisha.verma@ohumhealthcare.com",
-  dob: "1988-03-14",
-  phone: "9123456780",
-  address: "C-12, Civil Lines, Jaipur, Rajasthan - 302006",
-  licenseNo: "RJ-MED-22394",
-  specialization: "Cardiologist",
-  department: "Cardiology",
-  totalExp: 9,
-  avatarUrl: "/Avatar.png",
+const formatDate = (dob?: string | null) => {
+  if (!dob) return undefined;
+  return new Date(dob).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
 };
 
 const Profile = () => {
-  const Logindoctor = useSelector((state: any) => state.user);
-  const [doctor, setDoctor] = useState<Doctor>(Logindoctor);
-  const [draft, setDraft] = useState<Doctor>(Logindoctor);
+  const LoginDoctor = useSelector((state: any) => state.user);
+
+  const [doctor, setDoctor] = useState<Doctor | null>(null);
+  const [draft, setDraft] = useState<Doctor | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    getDoctor(LoginDoctor.profileId)
+      .then((data: DoctorDto) => {
+        const d = toDoctor(data);
+        setDoctor(d);
+        setDraft(d);
+      })
+      .catch((err: any) => {
+        console.error("Error fetching doctor profile:", err);
+        setError("Failed to load profile. Please try again later.");
+      })
+      .finally(() => setIsLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  if (isLoading || !doctor || !draft) {
+    return (
+      <div className="p-10 max-w-4xl mx-auto flex items-center gap-3 text-neutral-500">
+        <Loader size="sm" />
+        {error ?? "Loading profile..."}
+      </div>
+    );
+  }
 
   const dobLocked = !!doctor.dob && doctor.dob.trim() !== "";
   const licenseLocked = !!doctor.licenseNo && doctor.licenseNo.trim() !== "";
@@ -194,9 +268,8 @@ const Profile = () => {
     setError(null);
   };
 
-  const update =
-    (field: keyof Doctor) => (val: string | number) =>
-      setDraft((prev) => ({ ...prev, [field]: val }));
+  const update = (field: keyof Doctor) => (val: string | number) =>
+    setDraft((prev) => (prev ? { ...prev, [field]: val } : prev));
 
   const handleAvatarClick = () => {
     if (isEditing) fileInputRef.current?.click();
@@ -210,12 +283,15 @@ const Profile = () => {
 
     const reader = new FileReader();
     reader.onload = () => {
-      setDraft((prev) => ({ ...prev, avatarUrl: reader.result as string }));
+      setDraft((prev) =>
+        prev ? { ...prev, avatarUrl: reader.result as string } : prev,
+      );
     };
     reader.readAsDataURL(file);
   };
 
   const handleSave = async () => {
+    if (!draft) return;
     try {
       setIsSaving(true);
       setError(null);
@@ -226,9 +302,21 @@ const Profile = () => {
         return;
       }
 
-      const formData = new FormData();
+      // Avatar goes through its own multipart endpoint — upload it first
+      // (if the user picked a new one) so we have the persisted URL before
+      // saving the rest of the profile.
+      let persistedAvatarUrl = draft.avatarUrl;
+      if (avatarFile) {
+        const { avatarUrl } = await uploadDoctorAvatar(
+          LoginDoctor.profileId,
+          avatarFile,
+        );
+        persistedAvatarUrl = avatarUrl;
+      }
 
-      const doctorPayload: Record<string, string | number> = {
+      // Matches DoctorDto shape. name/email/id are owned by UserDto and
+      // aren't editable here.
+      const payload: Record<string, string | number> = {
         phone: draft.phone,
         address: draft.address,
         specialization: draft.specialization,
@@ -237,42 +325,29 @@ const Profile = () => {
       };
 
       if (!dobLocked) {
-        doctorPayload.dob = draft.dob ?? "";
+        payload.dob = draft.dob ?? "";
       }
       if (!licenseLocked) {
-        doctorPayload.licenseNo = draft.licenseNo ?? "";
+        payload.licenseNo = draft.licenseNo ?? "";
       }
 
-      formData.append(
-        "doctor",
-        new Blob([JSON.stringify(doctorPayload)], { type: "application/json" })
+      const updatedDto: DoctorDto = await updateDoctor(
+        LoginDoctor.profileId,
+        payload,
       );
 
-      if (avatarFile) {
-        formData.append("avatar", avatarFile);
-      }
-
-      /* const res = await fetch(`/api/doctors/${doctor.id}`, {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token") ?? ""}`,
-        },
-        body: formData,
-      });
-
-      if (!res.ok) {
-        throw new Error(`Failed to update profile (${res.status})`);
-      }
-
-      const updated: Doctor = await res.json();
+      const updated = toDoctor(updatedDto, persistedAvatarUrl);
 
       setDoctor(updated);
       setDraft(updated);
-      setAvatarFile(null); */
+      setAvatarFile(null);
       setIsEditing(false);
-    } catch (err) {
+      successNotification("Your profile details have been updated successfully.");
+    } catch (err: any) {
       console.error(err);
       setError("Something went wrong while saving. Please try again.");
+      const errMsg = err.response?.data?.errorMessage;
+      errorNotification(errMsg);
     } finally {
       setIsSaving(false);
     }
@@ -444,15 +519,6 @@ const Profile = () => {
       </div>
     </div>
   );
-};
-
-const formatDate = (dob?: string | null) => {
-  if (!dob) return undefined;
-  return new Date(dob).toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
 };
 
 export default Profile;

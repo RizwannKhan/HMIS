@@ -35,9 +35,11 @@ public class DoctorDto {
 
     private Integer totalExp;
 
+    private String avatarUrl;
+
     public Doctor toDoctorEntity() {
         return new Doctor(this.id, this.name, this.email, this.dob, this.phone, this.address, this.licenseNo,
-                this.specialization, this.department, this.totalExp);
+                this.specialization, this.department, this.totalExp, this.avatarUrl);
     }
 
 }
