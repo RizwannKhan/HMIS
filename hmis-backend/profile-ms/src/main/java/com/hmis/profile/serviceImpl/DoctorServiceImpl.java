@@ -98,4 +98,9 @@ public class DoctorServiceImpl implements DoctorService {
         return avatarUrl;
     }
 
+    @Override
+    public Boolean isDoctorExists(Long id) throws HMSException {
+        return doctorRepository.existsById(id);
+    }
+
 }

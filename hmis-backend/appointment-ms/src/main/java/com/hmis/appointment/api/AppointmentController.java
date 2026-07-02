@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.hmis.appointment.dto.AppointmentDetails;
 import com.hmis.appointment.dto.AppointmentDto;
 import com.hmis.appointment.exception.HMSException;
 import com.hmis.appointment.service.AppointmentService;
@@ -16,7 +17,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
@@ -28,7 +28,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 @RequiredArgsConstructor
 @Validated
 @CrossOrigin
-public class AppintmentController {
+public class AppointmentController {
 
     private final AppointmentService appointmentService;
 
@@ -52,6 +52,12 @@ public class AppintmentController {
         appointmentService.cancelAppointment(id);
         return ResponseEntity.ok("Appointment cancelled successfully");
     }
-    
+
+    @GetMapping("/get/details/{id}")
+    @ResponseStatus(HttpStatus.OK)
+    public ResponseEntity<AppointmentDetails> getAppointmentDetailsWithName(@PathVariable Long id) throws HMSException {
+        AppointmentDetails appointmentDetails = appointmentService.getAppointmentDetailsWithName(id);
+        return ResponseEntity.ok(appointmentDetails);
+    }
 
 }

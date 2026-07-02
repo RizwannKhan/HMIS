@@ -37,9 +37,19 @@
             "type": "java",
             "name": "Spring Boot-AppointmentMsApplication<appointment-ms>",
             "request": "launch",
-            "cwd": "${workspaceFolder}",
+            "cwd": "${workspaceFolder}/hmis-backend/appointment-ms",
             "mainClass": "com.hmis.appointment.AppointmentMsApplication",
             "projectName": "appointment-ms",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        },
+        {
+            "type": "java",
+            "name": "Spring Boot-EurekaServerApplication<eureka-server>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}/hmis-backend/eureka-server",
+            "mainClass": "com.hmis.eureka.EurekaServerApplication",
+            "projectName": "eureka-server",
             "args": "",
             "envFile": "${workspaceFolder}/.env"
         }

@@ -1,5 +1,7 @@
 package com.hmis.user.service.serviceImpl;
 
+import com.hmis.user.clients.ProfileClient;
+import com.hmis.user.dto.Roles;
 import com.hmis.user.dto.UserDto;
 import com.hmis.user.entity.User;
 import com.hmis.user.exception.HMSException;
@@ -27,6 +29,7 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final ApiService apiService;
+    private final ProfileClient profileClient;
 
     @Override
     public void registerUser(UserDto userDto) throws HMSException {
@@ -35,16 +38,23 @@ public class UserServiceImpl implements UserService {
             throw new HMSException("USER_ALREADY_EXISTS");
         }
         userDto.setPassword(passwordEncoder.encode(userDto.getPassword()));
-        @Nullable
-        Long profileId = apiService.addProfile(userDto).block();
-        System.out.println("ProfileId : " + profileId);
-        userDto.setProfileId(profileId);
+        // Long profileId = apiService.addProfile(userDto).block();
+        if (userDto.getRole().equals(Roles.DOCTOR)) {
+            Long profileId = profileClient.addDoctorProfile(userDto);
+            log.info("Doctor Profile Id : {}", profileId);
+            userDto.setProfileId(profileId);
+        } else if (userDto.getRole().equals(Roles.PATIENT)) {
+            Long profileId = profileClient.addPatientProfile(userDto);
+            log.info("Patient Profile Id : {}", profileId);
+            userDto.setProfileId(profileId);
+        }
         userRepository.save(userDto.toEntity());
     }
 
     @Override
     public UserDto loginUser(UserDto userDto) throws HMSException {
-        User user = userRepository.findByEmail(userDto.getEmail()).orElseThrow(() -> new HMSException("USER_NOT_FOUND"));
+        User user = userRepository.findByEmail(userDto.getEmail())
+                .orElseThrow(() -> new HMSException("USER_NOT_FOUND"));
         if (!passwordEncoder.matches(userDto.getPassword(), user.getPassword())) {
             throw new HMSException("INVALID_CREDENTIALS");
         }

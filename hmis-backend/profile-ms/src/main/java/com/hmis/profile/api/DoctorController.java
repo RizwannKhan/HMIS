@@ -66,4 +66,10 @@ public class DoctorController {
         return ResponseEntity.ok(Map.of("avatarUrl", avatarUrl));
     }
 
+    @GetMapping("/exists/{id}")
+    public ResponseEntity<Boolean> isDoctorExists(@PathVariable Long id) throws HMSException {
+        Boolean exists = doctorService.isDoctorExists(id);
+        return ResponseEntity.ok(exists);
+    }
+
 }

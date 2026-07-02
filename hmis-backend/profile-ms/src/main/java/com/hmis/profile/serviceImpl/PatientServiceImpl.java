@@ -96,4 +96,9 @@ public class PatientServiceImpl implements PatientService {
         return avatarUrl;
     }
 
+    @Override
+    public Boolean isPatientExists(Long id) throws HMSException {
+        return patientRepository.existsById(id);
+    }
+
 }

@@ -11,5 +11,5 @@ public interface DoctorService {
     DoctorDto getDoctor(Long id) throws HMSException;
     DoctorDto updateDoctor(long id, DoctorDto doctorDto) throws HMSException;
     String updateProfilePicture(Long id, MultipartFile file)  throws HMSException;
-
+    Boolean isDoctorExists(Long id) throws HMSException;
 }

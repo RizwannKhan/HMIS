@@ -21,11 +21,9 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.hmis.profile.dto.PatientDto;
-import com.hmis.profile.entity.Patient;
 import com.hmis.profile.exception.HMSException;
 import com.hmis.profile.service.PatientService;
 
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -76,6 +74,12 @@ public class PatientController {
         String avatarUrl = patientService.updateProfilePicture(id, file);
 
         return ResponseEntity.ok(Map.of("avatarUrl", avatarUrl));
+    }
+
+    @GetMapping("/exists/{id}")
+    public ResponseEntity<Boolean> isPatientExists(@PathVariable Long id) throws HMSException {
+        Boolean exists = patientService.isPatientExists(id);
+        return ResponseEntity.ok(exists);
     }
 
 }
