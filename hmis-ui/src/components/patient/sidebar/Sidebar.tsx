@@ -9,9 +9,24 @@ import {
   UserCircleCheckIcon,
   UserIcon,
 } from "@phosphor-icons/react";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { NavLink } from "react-router-dom";
+import { getPatient } from "../../../services/PatientProfileService";
+
+interface PatientDto {
+  id: number;
+  name: string;
+  email: string;
+  dob: string | null;
+  phone: string;
+  address: string;
+  aadhaarNo: string | null;
+  bloodGroup: string;
+  allergies: string; // comma-separated from backend
+  chronicDisease: string; // comma-separated from backend
+  avatarUrl: string | null;
+}
 
 const links = [
   {
@@ -33,6 +48,17 @@ const links = [
 
 const Sidebar = () => {
   const user = useSelector((state: any) => state.user);
+  const [patient, setPatient] = useState<PatientDto | null>(null);
+  useEffect(() => {
+      getPatient(user?.profileId)
+        .then((data: PatientDto) => {
+          setPatient(data);
+        })
+        .catch((err: any) => {
+          console.error("Error fetching patient profile:", err);
+          // setError("Failed to load profile. Please try again later.");
+        });
+    }, []);
   return (
     <div className="flex">
       <div className="w-64"></div>
@@ -46,7 +72,7 @@ const Sidebar = () => {
             <div className="p-1 bg-white rounded-full shadow-lg">
               <Avatar
                 variant="filled"
-                src="/Avatar.png"
+                src={patient?.avatarUrl ?? "/Avatar.png"}
                 size={"xl"}
                 alt="Profile"
               />

@@ -32,4 +32,13 @@ const uploadDoctorAvatar = async (doctorId: any, file: File) => {
     });
 };
 
-export { getDoctor, updateDoctor, uploadDoctorAvatar };
+const getDoctorsDropdown = async () => {
+  return axiosInstance
+    .get(`/profile/doctor/dropdown`)
+    .then((response: any) => response.data)
+    .catch((error: any) => {
+      throw error;
+    });
+};
+
+export { getDoctor, updateDoctor, uploadDoctorAvatar, getDoctorsDropdown };

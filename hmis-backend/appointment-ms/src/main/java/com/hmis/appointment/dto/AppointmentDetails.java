@@ -27,6 +27,8 @@ public class AppointmentDetails {
 
     private String doctorName;
 
+    private String doctorDepartment;
+
     private LocalDateTime appointmentDateTime;
 
     private AppointmentStatus status;

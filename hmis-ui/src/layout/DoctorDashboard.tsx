@@ -1,5 +1,5 @@
+import Header from "../components/doctor/header/Header";
 import Sidebar from "../components/doctor/sidebar/Sidebar";
-import Header from "../components/header/Header";
 import { Outlet } from "react-router-dom";
 
 const DoctorDashboard = () => {

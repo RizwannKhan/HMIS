@@ -1,6 +1,7 @@
 package com.hmis.appointment.serviceImpl;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
@@ -103,9 +104,40 @@ public class AppointmentServiceImpl implements AppointmentService {
     }
 
     @Override
-    public List<AppointmentDto> getAppointmentsByPatientId(Long patientId) throws HMSException {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getAppointmentsByPatientId'");
+    public List<AppointmentDetails> getAppointmentsByPatientId(Long patientId) throws HMSException {
+        List<AppointmentDetails> appointmentsByPatientId = new ArrayList<>();
+        List<Appointment> appointments = appointmentRepository.findByPatientId(patientId);
+        if (appointments.isEmpty()) {
+            throw new HMSException("NO_APPOINTMENTS_FOUND_FOR_PATIENT");
+        }
+        for (Appointment appointment : appointments) {
+            DoctorDto doctorProfile = profileClient.getDoctorById(appointment.getDoctorId());
+            if(doctorProfile == null) {
+                throw new HMSException("DOCTOR_PROFILE_NOT_FOUND");
+            }
+
+            PatientDto patientProfile = profileClient.getPatientById(appointment.getPatientId());
+            if(patientProfile == null) {
+                throw new HMSException("PATIENT_PROFILE_NOT_FOUND");
+            }
+            AppointmentDetails appointmentDetails = AppointmentDetails.builder()
+                .id(appointment.getId())
+                .patientId(appointment.getPatientId())
+                .patientName(patientProfile.getName())
+                .patientEmail(patientProfile.getEmail())
+                .patientPhone(patientProfile.getPhone())
+                .doctorId(appointment.getDoctorId())
+                .doctorName(doctorProfile.getName())
+                .doctorDepartment(doctorProfile.getDepartment() != null ? doctorProfile.getDepartment() : "N/A")
+                .appointmentDateTime(appointment.getAppointmentDateTime())
+                .status(appointment.getStatus())
+                .type(appointment.getType())
+                .reasonForVisit(appointment.getReasonForVisit())
+                .notes(appointment.getNotes())
+                .build();
+            appointmentsByPatientId.add(appointmentDetails);
+        }
+        return appointmentsByPatientId;
     }
 
     @Override
@@ -148,6 +180,7 @@ public class AppointmentServiceImpl implements AppointmentService {
                 .patientPhone(patientProfile.getPhone())
                 .doctorId(appointment.getDoctorId())
                 .doctorName(doctorProfile.getName())
+                .doctorDepartment(doctorProfile.getDepartment() != null ? doctorProfile.getDepartment() : "N/A")
                 .appointmentDateTime(appointment.getAppointmentDateTime())
                 .status(appointment.getStatus())
                 .type(appointment.getType())

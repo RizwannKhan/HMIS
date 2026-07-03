@@ -1,5 +1,7 @@
 package com.hmis.appointment.api;
 
+import java.util.List;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -58,6 +60,12 @@ public class AppointmentController {
     public ResponseEntity<AppointmentDetails> getAppointmentDetailsWithName(@PathVariable Long id) throws HMSException {
         AppointmentDetails appointmentDetails = appointmentService.getAppointmentDetailsWithName(id);
         return ResponseEntity.ok(appointmentDetails);
+    }
+
+    @GetMapping("/patient/{patientId}")
+    @ResponseStatus(HttpStatus.OK)
+    public ResponseEntity<List<AppointmentDetails>> getAppointmentsByPatientId(@PathVariable Long patientId) throws HMSException {
+        return ResponseEntity.ok(appointmentService.getAppointmentsByPatientId(patientId));
     }
 
 }

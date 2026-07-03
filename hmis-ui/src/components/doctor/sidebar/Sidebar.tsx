@@ -8,8 +8,24 @@ import {
   SquaresFourIcon,
   UserCircleCheckIcon,
 } from "@phosphor-icons/react";
+import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { NavLink } from "react-router-dom";
+import { getDoctor } from "../../../services/DoctorProfileService";
+
+interface DoctorDto {
+  id: number;
+  name: string;
+  email: string;
+  dob: string | null;
+  phone: string;
+  address: string;
+  licenseNo: string | null;
+  specialization: string;
+  department: string;
+  totalExp: number;
+  avatarUrl: string | null;
+}
 
 const links = [
   {
@@ -41,6 +57,17 @@ const links = [
 
 const Sidebar = () => {
   const user = useSelector((state: any) => state.user);
+  const [doctor, setDoctor] = useState<DoctorDto | null>(null);
+    useEffect(() => {
+        getDoctor(user?.profileId)
+          .then((data: DoctorDto) => {
+            setDoctor(data);
+          })
+          .catch((err: any) => {
+            console.error("Error fetching doctor profile:", err);
+            // setError("Failed to load profile. Please try again later.");
+          });
+      }, []);
   return (
     <div className="flex">
       <div className="w-64"></div>
@@ -54,7 +81,7 @@ const Sidebar = () => {
             <div className="p-1 bg-white rounded-full shadow-lg">
               <Avatar
                 variant="filled"
-                src="/Avatar.png"
+                src={doctor?.avatarUrl ?? "/Avatar.png"}
                 size={"xl"}
                 alt="Profile"
               />

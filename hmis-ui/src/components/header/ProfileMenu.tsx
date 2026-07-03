@@ -1,6 +1,5 @@
 import { Menu, Button, Text, Avatar } from '@mantine/core';
 import { GearSixIcon, MagnifyingGlassIcon, ImageIcon, ChatCircleIcon, TrashIcon, ArrowsLeftRightIcon } from '@phosphor-icons/react';
-import { useEffect } from 'react';
 import { useSelector } from 'react-redux';
 
 const ProfileMenu = () => {

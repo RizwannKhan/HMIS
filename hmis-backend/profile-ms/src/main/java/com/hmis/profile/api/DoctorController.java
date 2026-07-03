@@ -1,6 +1,7 @@
 package com.hmis.profile.api;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.http.HttpStatus;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.hmis.profile.dto.DoctorDropdown;
 import com.hmis.profile.dto.DoctorDto;
 import com.hmis.profile.exception.HMSException;
 import com.hmis.profile.service.DoctorService;
@@ -70,6 +72,11 @@ public class DoctorController {
     public ResponseEntity<Boolean> isDoctorExists(@PathVariable Long id) throws HMSException {
         Boolean exists = doctorService.isDoctorExists(id);
         return ResponseEntity.ok(exists);
+    }
+
+    @GetMapping("/dropdown")
+    public ResponseEntity<List<DoctorDropdown>> getDoctorsDropdown() throws HMSException {
+        return ResponseEntity.ok(doctorService.getDoctorsDropdown());
     }
 
 }
