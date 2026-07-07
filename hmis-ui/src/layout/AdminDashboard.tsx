@@ -6,7 +6,7 @@ const AdminDashboard = () => {
   return (
     <div className="flex">
       <Sidebar />
-      <div className="w-full flex flex-col">
+      <div className="w-full flex flex-col min-w-0">
         <Header />
         <Outlet />
       </div>

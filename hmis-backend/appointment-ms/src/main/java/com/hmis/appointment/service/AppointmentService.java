@@ -20,9 +20,11 @@ public interface AppointmentService {
 
     List<AppointmentDetails> getAppointmentsByPatientId(Long patientId) throws HMSException;
 
-    List<AppointmentDto> getAppointmentsByDoctorId(Long doctorId) throws HMSException;
+    List<AppointmentDetails> getAppointmentsByDoctorId(Long doctorId) throws HMSException;
 
     List<AppointmentDto> getAppointmentsByStatus(String status) throws HMSException;
 
     AppointmentDetails getAppointmentDetailsWithName(Long appointmentId) throws HMSException;
+
+    void updateAppointmentStatus(Long id, String status) throws HMSException;
 }

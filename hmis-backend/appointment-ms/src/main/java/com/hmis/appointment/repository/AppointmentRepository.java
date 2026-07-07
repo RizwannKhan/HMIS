@@ -9,6 +9,9 @@ import com.hmis.appointment.entity.Appointment;
 public interface AppointmentRepository extends JpaRepository<Appointment, Long> {
 
     List<Appointment> findByPatientId(Long patientId);
+   
+    List<Appointment> findByDoctorId(Long doctorId);
+
 
     /* @Query("SELECT new com.hmis.appointment.dto.AppointmentDetails(a.id, a.patientId, a.doctorId, a.appointmentDateTime, a.status, a.type) FROM Appointment a WHERE a.patientId = :patientId")
     List<AppointmentDetails> findAllByPatientId(Long patientId); */

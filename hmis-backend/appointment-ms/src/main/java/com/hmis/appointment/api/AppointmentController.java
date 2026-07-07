@@ -43,7 +43,7 @@ public class AppointmentController {
 
     @GetMapping("/{id}")
     @ResponseStatus(HttpStatus.OK)
-    public ResponseEntity<AppointmentDto> getAppointmentDetailsById(@PathVariable Long id) throws HMSException {
+    public ResponseEntity<AppointmentDto> getAppointmentById(@PathVariable Long id) throws HMSException {
         AppointmentDto appointmentDto = appointmentService.getAppointmentById(id);
         return ResponseEntity.ok(appointmentDto);
     }
@@ -66,6 +66,19 @@ public class AppointmentController {
     @ResponseStatus(HttpStatus.OK)
     public ResponseEntity<List<AppointmentDetails>> getAppointmentsByPatientId(@PathVariable Long patientId) throws HMSException {
         return ResponseEntity.ok(appointmentService.getAppointmentsByPatientId(patientId));
+    }
+
+    @GetMapping("/doctor/{doctorId}")
+    @ResponseStatus(HttpStatus.OK)
+    public ResponseEntity<List<AppointmentDetails>> getAppointmentsByDoctorId(@PathVariable Long doctorId) throws HMSException {
+        return ResponseEntity.ok(appointmentService.getAppointmentsByDoctorId(doctorId));
+    }
+
+    @PutMapping("/update/status/{id}")
+    @ResponseStatus(HttpStatus.OK)
+    public ResponseEntity<String> updateAppointmentStatus(@PathVariable Long id, @RequestBody AppointmentDto appointmentDto) throws HMSException {
+        appointmentService.updateAppointmentStatus(id, appointmentDto.getStatus().toString());
+        return ResponseEntity.ok("Appointment status updated successfully");
     }
 
 }

@@ -141,9 +141,40 @@ public class AppointmentServiceImpl implements AppointmentService {
     }
 
     @Override
-    public List<AppointmentDto> getAppointmentsByDoctorId(Long doctorId) throws HMSException {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getAppointmentsByDoctorId'");
+    public List<AppointmentDetails> getAppointmentsByDoctorId(Long doctorId) throws HMSException {
+        List<AppointmentDetails> appointmentsByDoctorId = new ArrayList<>();
+        List<Appointment> appointments = appointmentRepository.findByDoctorId(doctorId);
+        if (appointments.isEmpty()) {
+            throw new HMSException("NO_APPOINTMENTS_FOUND_FOR_DOCTOR");
+        }
+        for (Appointment appointment : appointments) {
+            DoctorDto doctorProfile = profileClient.getDoctorById(appointment.getDoctorId());
+            if(doctorProfile == null) {
+                throw new HMSException("DOCTOR_PROFILE_NOT_FOUND");
+            }
+
+            PatientDto patientProfile = profileClient.getPatientById(appointment.getPatientId());
+            if(patientProfile == null) {
+                throw new HMSException("PATIENT_PROFILE_NOT_FOUND");
+            }
+            AppointmentDetails appointmentDetails = AppointmentDetails.builder()
+                .id(appointment.getId())
+                .patientId(appointment.getPatientId())
+                .patientName(patientProfile.getName())
+                .patientEmail(patientProfile.getEmail())
+                .patientPhone(patientProfile.getPhone())
+                .doctorId(appointment.getDoctorId())
+                .doctorName(doctorProfile.getName())
+                .doctorDepartment(doctorProfile.getDepartment() != null ? doctorProfile.getDepartment() : "N/A")
+                .appointmentDateTime(appointment.getAppointmentDateTime())
+                .status(appointment.getStatus())
+                .type(appointment.getType())
+                .reasonForVisit(appointment.getReasonForVisit())
+                .notes(appointment.getNotes())
+                .build();
+            appointmentsByDoctorId.add(appointmentDetails);
+        }
+        return appointmentsByDoctorId;
     }
 
     @Override
@@ -187,6 +218,19 @@ public class AppointmentServiceImpl implements AppointmentService {
                 .reasonForVisit(appointment.getReasonForVisit())
                 .notes(appointment.getNotes())
                 .build();
+    }
+
+    @Override
+    public void updateAppointmentStatus(Long id, String status) throws HMSException {
+        Appointment appointment = appointmentRepository.findById(id)
+                .orElseThrow(() -> new HMSException("APPOINTMENT_NOT_FOUND"));
+        try {
+            AppointmentStatus newStatus = AppointmentStatus.valueOf(status.toUpperCase());
+            appointment.setStatus(newStatus);
+            appointmentRepository.save(appointment);
+        } catch (IllegalArgumentException e) {
+            throw new HMSException("INVALID_APPOINTMENT_STATUS");
+        }
     }
 
 }

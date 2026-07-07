@@ -1,15 +1,11 @@
 package com.hmis.profile.api;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
+import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.util.StringUtils;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,6 +16,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.hmis.profile.dto.PatientDropdown;
 import com.hmis.profile.dto.PatientDto;
 import com.hmis.profile.exception.HMSException;
 import com.hmis.profile.service.PatientService;
@@ -80,6 +77,11 @@ public class PatientController {
     public ResponseEntity<Boolean> isPatientExists(@PathVariable Long id) throws HMSException {
         Boolean exists = patientService.isPatientExists(id);
         return ResponseEntity.ok(exists);
+    }
+
+    @GetMapping("/dropdown")
+    public ResponseEntity<List<PatientDropdown>> getPatientsDropdown() throws HMSException {
+        return ResponseEntity.ok(patientService.getPatientDropdown());
     }
 
 }

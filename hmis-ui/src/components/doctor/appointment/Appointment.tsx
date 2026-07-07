@@ -36,14 +36,15 @@ import {
   IconCalendarPlus,
   IconDotsVertical,
 } from "@tabler/icons-react";
-import { getDoctorsDropdown } from "../../../services/DoctorProfileService";
+import { getDoctor } from "../../../services/DoctorProfileService";
 import { errorNotification } from "../../../utility/NotificationUtil";
 import {
-  getAppointmentsByPatientId,
+  getAppointmentsByDoctorId,
   scheduleAppointment,
   cancelAppointment,
+  updateAppointmentStatus,
 } from "../../../services/AppointmentService";
-import { getPatient } from "../../../services/PatientProfileService";
+import { getPatientsDropdown } from "../../../services/PatientProfileService";
 
 // ---------- Types (mirrors AppointmentDetails.java exactly) ----------
 export enum AppointmentStatus {
@@ -81,22 +82,26 @@ export interface AppointmentDetails {
   notes: string;
 }
 
-// Mirrors DoctorDto.java exactly. LocalDate serializes as "yyyy-MM-dd" with
-// Jackson by default, so dob is typed as `string` here.
-export interface DoctorDropdown {
+// Mirrors PatientDto.java exactly — used to populate the patient picker in
+// the "Add appointment for a patient" dialog below.
+export interface PatientDropdown {
   id: number;
   name: string;
-  department: string;
+  email?: string;
+  phone?: string;
 }
 
-// Shape returned by GET /profile/patient/{id} (getPatient service). Adjust
-// field names here if your backend's patient DTO differs — this only needs
-// enough to prefill the Schedule dialog.
-export interface PatientProfile {
+// Shape returned by GET /profile/doctor/{id} (getDoctor service). This is
+// the logged-in doctor's own profile — shown read-only in the schedule
+// dialog and used to stamp doctorId/doctorName/doctorDepartment on new
+// appointments created from this page. Adjust field names here if your
+// backend's doctor DTO differs.
+export interface DoctorProfile {
   id: number;
   name: string;
   email: string;
   phone: string;
+  department: string;
 }
 
 // Mirrors AppointmentDto.java — the shape the server expects on
@@ -126,6 +131,14 @@ const statusColor: Record<AppointmentStatus, string> = {
 
 const statusOptions = Object.values(AppointmentStatus);
 const typeOptions = Object.values(AppointmentType);
+
+// Status transitions a doctor is allowed to make from the table's status
+// menu. CANCELLED is deliberately excluded here — cancelling stays behind
+// the dedicated Cancel action + confirmation dialog, so it can't be picked
+// accidentally from a quick dropdown.
+const STATUS_MENU_OPTIONS = statusOptions.filter(
+  (s) => s !== AppointmentStatus.CANCELLED,
+);
 
 type SortField =
   | "patientName"
@@ -159,78 +172,11 @@ const defaultColumnFilters: ColumnFilters = {
   date: null,
 };
 
-// ---------- Dummy data ----------
-// Swap fetchAppointments() below for a real call once appointment-ms is
-// ready; the shape here matches AppointmentDetails exactly so nothing else
-// needs to change.
-const DUMMY_PATIENTS = [
-  {
-    id: 1,
-    name: "Aarav Sharma",
-    email: "aarav.sharma@example.com",
-    phone: "+91 98765 43210",
-  },
-  {
-    id: 2,
-    name: "Priya Mehta",
-    email: "priya.mehta@example.com",
-    phone: "+91 98123 45678",
-  },
-  {
-    id: 3,
-    name: "Rohan Kapoor",
-    email: "rohan.kapoor@example.com",
-    phone: "+91 99887 76655",
-  },
-  {
-    id: 4,
-    name: "Ishita Verma",
-    email: "ishita.verma@example.com",
-    phone: "+91 91234 56789",
-  },
-  {
-    id: 5,
-    name: "Kabir Nair",
-    email: "kabir.nair@example.com",
-    phone: "+91 90909 80808",
-  },
-  {
-    id: 6,
-    name: "Sanya Gupta",
-    email: "sanya.gupta@example.com",
-    phone: "+91 97531 08642",
-  },
-  {
-    id: 7,
-    name: "Vivaan Joshi",
-    email: "vivaan.joshi@example.com",
-    phone: "+91 96385 27419",
-  },
-  {
-    id: 8,
-    name: "Ananya Reddy",
-    email: "ananya.reddy@example.com",
-    phone: "+91 93456 78901",
-  },
-];
-
-// Used only to seed the dummy appointment rows below until appointment-ms
-// is live. The doctor *picker* in the Schedule dialog uses real data from
-// doctor-ms (see `doctors` state + fetchDoctors()) — this array is unrelated
-// to that and can be deleted once fetchAppointments() hits a real endpoint.
-const DUMMY_DOCTORS = [
-  { id: 101, name: "Dr. Neha Rao", department: "Cardiology" },
-  { id: 102, name: "Dr. Arjun Malhotra", department: "Orthopedics" },
-  { id: 103, name: "Dr. Simran Kaur", department: "Dermatology" },
-  { id: 104, name: "Dr. Vikram Iyer", department: "General Medicine" },
-  { id: 105, name: "Dr. Fatima Sheikh", department: "Pediatrics" },
-];
-
 // Common reasons for visit, grouped by category so the dropdown in the
 // Schedule dialog can show them under labeled sections (Mantine Select
 // supports grouped data via { group, items }). "Other" is a sentinel value —
-// picking it reveals a free-text field so the patient can type their own
-// reason instead of being limited to this list.
+// picking it reveals a free-text field so the reason isn't limited to this
+// list.
 const OTHER_REASON_VALUE = "OTHER";
 
 const APPOINTMENT_REASONS: { category: string; reasons: string[] }[] = [
@@ -282,9 +228,6 @@ const APPOINTMENT_REASONS: { category: string; reasons: string[] }[] = [
   },
 ];
 
-// Flat list — used only to seed dummy appointment rows.
-const REASONS = APPOINTMENT_REASONS.flatMap((g) => g.reasons);
-
 // Grouped `data` shape for the reason <Select>, with "Other" pinned as its
 // own trailing group.
 const REASON_SELECT_DATA = [
@@ -298,54 +241,8 @@ const REASON_SELECT_DATA = [
   },
 ];
 
-function generateDummyAppointments(count: number): AppointmentDetails[] {
-  const statuses = statusOptions;
-  const types = typeOptions;
-  const appointments: AppointmentDetails[] = [];
-
-  for (let i = 0; i < count; i++) {
-    const patient = DUMMY_PATIENTS[i % DUMMY_PATIENTS.length];
-    const doctor = DUMMY_DOCTORS[i % DUMMY_DOCTORS.length];
-    const status = statuses[i % statuses.length];
-    const type = types[i % types.length];
-    const reason = REASONS[i % REASONS.length];
-
-    // Spread appointments across the next 20 days, business hours only.
-    const dayOffset = Math.floor(i / 2) - 5;
-    const hour = 9 + (i % 8);
-    const date = new Date();
-    date.setDate(date.getDate() + dayOffset);
-    date.setHours(hour, i % 2 === 0 ? 0 : 30, 0, 0);
-
-    appointments.push({
-      id: i + 1,
-      patientId: patient.id,
-      patientName: patient.name,
-      patientEmail: patient.email,
-      patientPhone: patient.phone,
-      doctorId: doctor.id,
-      doctorName: doctor.name,
-      doctorDepartment: doctor.department,
-      appointmentDateTime: date.toISOString(),
-      status,
-      type,
-      reasonForVisit: reason,
-      notes:
-        status === AppointmentStatus.COMPLETED
-          ? "Patient responded well to treatment. Follow-up in 2 weeks if symptoms persist."
-          : status === AppointmentStatus.CANCELLED
-            ? "Cancelled by patient — rescheduling requested."
-            : status === AppointmentStatus.RESCHEDULED
-              ? "Original slot moved at patient's request."
-              : "",
-    });
-  }
-
-  return appointments;
-}
-
 const emptyForm = {
-  doctorId: null as number | null,
+  patientId: null as number | null,
   type: null as AppointmentType | null,
   appointmentDateTime: null as Date | string | null,
   reasonForVisit: "", // holds a value from REASON_SELECT_DATA, or OTHER_REASON_VALUE
@@ -360,14 +257,19 @@ const Appointment = () => {
   const [appointments, setAppointments] = useState<AppointmentDetails[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [doctors, setDoctors] = useState<DoctorDropdown[]>([]);
-  const [doctorsLoading, setDoctorsLoading] = useState(true);
+  // Patients live in the picker for "Add appointment for a patient" below.
+  // Adjust the URL / import in PatientProfileService if your endpoint name
+  // differs from getPatientsDropdown.
+  const [patients, setPatients] = useState<PatientDropdown[]>([]);
+  const [patientsLoading, setPatientsLoading] = useState(true);
 
-  // The logged-in patient's own profile — fetched once, used to prefill and
-  // lock the "Patient" fields in the Schedule dialog. No dropdown needed:
-  // a patient on their own dashboard can only ever book for themselves.
-  const [patient, setPatient] = useState<PatientProfile | null>(null);
-  const [patientLoading, setPatientLoading] = useState(true);
+  // The logged-in doctor's own profile — fetched once, shown read-only in
+  // the Schedule dialog's "Doctor" section, and used to stamp doctorId on
+  // new appointments (a doctor can only ever book under themselves).
+  const [doctorProfile, setDoctorProfile] = useState<DoctorProfile | null>(
+    null,
+  );
+  const [doctorProfileLoading, setDoctorProfileLoading] = useState(true);
 
   const [globalFilter, setGlobalFilter] = useState("");
   const [columnFilters, setColumnFilters] =
@@ -392,81 +294,61 @@ const Appointment = () => {
   );
   const [cancellingId, setCancellingId] = useState<number | null>(null);
 
+  // Per-row in-flight tracking for the "change status" menu.
+  const [updatingStatusId, setUpdatingStatusId] = useState<number | null>(
+    null,
+  );
+
   useEffect(() => {
     fetchAppointments();
-    fetchDoctors();
-    fetchPatient();
+    //fetchPatients();
+    fetchDoctorProfile();
   }, []);
 
   const fetchAppointments = async () => {
     setLoading(true);
 
-    // ---- DUMMY DATA (remove this block once appointment-ms is live) ----
-    /* setTimeout(() => {
-      setAppointments(generateDummyAppointments(24));
-      setLoading(false);
-    }, 400);
-    return; */
-
-    getAppointmentsByPatientId(user?.profileId)
+    getAppointmentsByDoctorId(user?.profileId)
       .then((data: AppointmentDetails[]) => {
         setAppointments(data);
-        setLoading(false);
       })
       .catch((err: any) => {
         console.error("Error fetching appointments:", err);
         errorNotification("Failed to load appointments.");
       })
-      .finally(() => setDoctorsLoading(false));
-
-    // ---- Real API call — uncomment when the endpoint is ready ----
-    // try {
-    //   const res = await fetch("http://localhost:9090/appointment-ms/api/appointments");
-    //   if (!res.ok) throw new Error(`Request failed: ${res.status}`);
-    //   const data: AppointmentDetails[] = await res.json();
-    //   setAppointments(data);
-    // } catch (err) {
-    //   console.error("Failed to load appointments", err);
-    //   notifications.show({
-    //     color: "red",
-    //     title: "Load failed",
-    //     message: "Could not fetch appointments. Showing no data.",
-    //   });
-    //   setAppointments([]);
-    // } finally {
-    //   setLoading(false);
-    // }
+      .finally(() => setLoading(false));
   };
 
-  // Doctor list is live — powers the "Doctor" picker in the Schedule dialog.
-  // Adjust the URL to wherever doctor-ms is actually exposed for you.
-  const fetchDoctors = async () => {
-    setDoctorsLoading(true);
-    getDoctorsDropdown()
-      .then((data: DoctorDropdown[]) => {
-        setDoctors(data);
+  // Patient list is live — powers the "Patient" picker in the schedule
+  // dialog. Adjust the URL to wherever patient-ms is actually exposed for
+  // you if getPatientsDropdown doesn't already match.
+  const fetchPatients = async () => {
+    setPatientsLoading(true);
+    getPatientsDropdown()
+      .then((data: PatientDropdown[]) => {
+        setPatients(data);
       })
       .catch((err: any) => {
-        console.error("Error fetching doctors: ", err);
-        errorNotification("Failed to load doctors.");
+        console.error("Error fetching patients: ", err);
+        errorNotification("Failed to load patients.");
       })
-      .finally(() => setDoctorsLoading(false));
+      .finally(() => setPatientsLoading(false));
   };
 
-  // The logged-in patient's own record — used to prefill the Schedule
-  // dialog. user.profileId is the same id already used above for
-  // getAppointmentsByPatientId, so this stays consistent with that pattern.
-  const fetchPatient = async () => {
-    setPatientLoading(true);
-    getPatient(user?.profileId)
-      .then((data: PatientProfile) => {
-        setPatient(data);
+  // The logged-in doctor's own record — used to prefill the read-only
+  // "Doctor" section of the Schedule dialog. user.profileId is the same id
+  // already used above for getAppointmentsByDoctorId.
+  const fetchDoctorProfile = async () => {
+    setDoctorProfileLoading(true);
+    getDoctor(user?.profileId)
+      .then((data: DoctorProfile) => {
+        setDoctorProfile(data);
       })
       .catch((err: any) => {
-        console.error("Error fetching patient profile:", err);
-        errorNotification("Failed to load your patient profile.");
+        console.error("Error fetching doctor profile:", err);
+        errorNotification("Failed to load your doctor profile.");
       })
-      .finally(() => setPatientLoading(false));
+      .finally(() => setDoctorProfileLoading(false));
   };
 
   // ---------- Filtering ----------
@@ -609,7 +491,7 @@ const Appointment = () => {
   };
 
   const handleScheduleSubmit = async () => {
-    const { doctorId, type, appointmentDateTime, reasonForVisit, customReason, notes } =
+    const { patientId, type, appointmentDateTime, reasonForVisit, customReason, notes } =
       scheduleForm;
     const appointmentDate = toDate(appointmentDateTime);
 
@@ -621,8 +503,8 @@ const Appointment = () => {
         : reasonForVisit;
 
     if (
-      !patient ||
-      !doctorId ||
+      !doctorProfile ||
+      !patientId ||
       !type ||
       !appointmentDate ||
       !reasonForVisit ||
@@ -631,24 +513,24 @@ const Appointment = () => {
       notifications.show({
         color: "yellow",
         title: "Missing details",
-        message: patient
+        message: doctorProfile
           ? reasonForVisit === OTHER_REASON_VALUE && !customReason.trim()
-            ? "Please describe your reason for visit."
-            : "Please fill in doctor, type, date & time, and reason for visit."
-          : "Still loading your patient profile — try again in a moment.",
+            ? "Please describe the reason for visit."
+            : "Please fill in patient, type, date & time, and reason for visit."
+          : "Still loading your doctor profile — try again in a moment.",
       });
       return;
     }
 
     setScheduleSubmitting(true);
 
-    const doctor = doctors.find((d) => d.id === doctorId);
+    const patient = patients.find((p) => p.id === patientId);
 
     // Payload matches AppointmentDto.java exactly — server resolves
-    // doctorName/doctorDepartment etc from doctorId on its side.
+    // patientName/doctorName/etc from patientId/doctorId on its side.
     const payload: AppointmentDto = {
-      patientId: patient.id,
-      doctorId,
+      patientId,
+      doctorId: doctorProfile.id,
       appointmentDateTime: toLocalDateTimeString(appointmentDate),
       status: AppointmentStatus.SCHEDULED,
       type,
@@ -666,13 +548,13 @@ const Appointment = () => {
       // have locally so the table row renders correctly right away.
       const newAppointment: AppointmentDetails = {
         id: created.id ?? Math.max(0, ...appointments.map((a) => a.id)) + 1,
-        patientId: patient.id,
-        patientName: created.patientName ?? patient.name,
-        patientEmail: created.patientEmail ?? patient.email,
-        patientPhone: created.patientPhone ?? patient.phone,
-        doctorId,
-        doctorName: created.doctorName ?? doctor?.name ?? "",
-        doctorDepartment: created.doctorDepartment ?? doctor?.department ?? "",
+        patientId,
+        patientName: created.patientName ?? patient?.name ?? "",
+        patientEmail: created.patientEmail ?? patient?.email ?? "",
+        patientPhone: created.patientPhone ?? patient?.phone ?? "",
+        doctorId: doctorProfile.id,
+        doctorName: created.doctorName ?? doctorProfile.name,
+        doctorDepartment: created.doctorDepartment ?? doctorProfile.department,
         appointmentDateTime:
           created.appointmentDateTime ?? payload.appointmentDateTime,
         status: created.status ?? AppointmentStatus.SCHEDULED,
@@ -686,7 +568,7 @@ const Appointment = () => {
       notifications.show({
         color: "green",
         title: "Appointment scheduled",
-        message: `Booked with ${newAppointment.doctorName} on ${new Date(
+        message: `Booked with ${newAppointment.patientName} on ${new Date(
           newAppointment.appointmentDateTime,
         ).toLocaleString("en-IN")}`,
       });
@@ -732,7 +614,7 @@ const Appointment = () => {
       notifications.show({
         color: "green",
         title: "Appointment cancelled",
-        message: `Cancelled appointment with ${cancelTarget.doctorName} on ${formatDate(
+        message: `Cancelled appointment with ${cancelTarget.patientName} on ${formatDate(
           cancelTarget.appointmentDateTime,
         )}.`,
       });
@@ -742,6 +624,36 @@ const Appointment = () => {
       errorNotification("Failed to cancel appointment. Please try again.");
     } finally {
       setCancellingId(null);
+    }
+  };
+
+  // Doctor-only: change an appointment's status from the table (e.g. mark
+  // Confirmed, In Progress, Completed, No-show). Cancelling stays behind
+  // the dedicated Cancel action above, so it isn't in this list.
+  const handleStatusChange = async (
+    row: AppointmentDetails,
+    newStatus: AppointmentStatus,
+  ) => {
+    if (newStatus === row.status) return;
+
+    setUpdatingStatusId(row.id);
+    try {
+      await updateAppointmentStatus(row.id, newStatus);
+
+      setAppointments((prev) =>
+        prev.map((a) => (a.id === row.id ? { ...a, status: newStatus } : a)),
+      );
+
+      notifications.show({
+        color: "green",
+        title: "Status updated",
+        message: `${row.patientName}'s appointment marked as ${newStatus.replace("_", " ")}.`,
+      });
+    } catch (err) {
+      console.error("Failed to update appointment status", err);
+      errorNotification("Failed to update status. Please try again.");
+    } finally {
+      setUpdatingStatusId(null);
     }
   };
 
@@ -800,11 +712,11 @@ const Appointment = () => {
         <Title order={2} className="!m-0">
           Appointments
         </Title>
-        <Button
+        <Button style={{ display: "none" }}
           leftSection={<IconCalendarPlus size={18} />}
           onClick={openScheduleDialog}
         >
-          Schedule Appointment
+          Add Appointment
         </Button>
       </div>
 
@@ -814,7 +726,7 @@ const Appointment = () => {
           <SegmentedControl
             value={timeRangeFilter}
             onChange={(v) => setTimeRangeFilter(v as TimeRangeFilter)}
-            color="primary"
+            color="teal"
             data={[
               { label: "All", value: "all" },
               { label: "Today", value: "today" },
@@ -997,9 +909,49 @@ const Appointment = () => {
                         {row.type.replace("_", " ")}
                       </Table.Td>
                       <Table.Td className="min-w-[7rem]">
-                        <Badge color={statusColor[row.status]} variant="light">
-                          {row.status.replace("_", " ")}
-                        </Badge>
+                        {/* Clicking the badge opens the status-change menu
+                            below; disabled once cancelled, a terminal state. */}
+                        <Menu
+                          shadow="md"
+                          width={170}
+                          position="bottom-start"
+                          disabled={row.status === AppointmentStatus.CANCELLED}
+                        >
+                          <Menu.Target>
+                            <Badge
+                              color={statusColor[row.status]}
+                              variant="light"
+                              style={{
+                                cursor:
+                                  row.status === AppointmentStatus.CANCELLED
+                                    ? "default"
+                                    : "pointer",
+                              }}
+                              rightSection={
+                                updatingStatusId === row.id ? (
+                                  <Loader size={10} color={statusColor[row.status]} />
+                                ) : row.status !==
+                                  AppointmentStatus.CANCELLED ? (
+                                  <IconChevronDown size={12} />
+                                ) : undefined
+                              }
+                            >
+                              {row.status.replace("_", " ")}
+                            </Badge>
+                          </Menu.Target>
+                          <Menu.Dropdown>
+                            <Menu.Label>Change status</Menu.Label>
+                            {STATUS_MENU_OPTIONS.map((s) => (
+                              <Menu.Item
+                                key={s}
+                                disabled={s === row.status}
+                                onClick={() => handleStatusChange(row, s)}
+                              >
+                                {s.replace("_", " ")}
+                              </Menu.Item>
+                            ))}
+                          </Menu.Dropdown>
+                        </Menu>
                       </Table.Td>
                       <Table.Td className="min-w-[12rem]">
                         {row.reasonForVisit}
@@ -1008,6 +960,7 @@ const Appointment = () => {
                         <Group gap={4} wrap="nowrap">
                           <ActionIcon
                             variant="subtle"
+                            style={{ display: "none" }}
                             color="green"
                             aria-label="Edit"
                             onClick={() => console.log("edit", row.id)}
@@ -1099,58 +1052,62 @@ const Appointment = () => {
         </div>
       </Paper>
 
-      {/* Schedule Appointment dialog */}
+      {/* Add appointment for a patient */}
       <Modal
         opened={scheduleDialogOpen}
         onClose={closeScheduleDialog}
-        title="Schedule Appointment"
+        title="Add Appointment"
         size="lg"
         centered
       >
         <Stack gap="md" pt="xs">
-          {/* Patient section: read-only, sourced from the logged-in user's
-              own profile via getPatient(user.profileId) — no picker, since
-              this is the patient's own dashboard. */}
-          {patientLoading ? (
+          {/* Doctor section: read-only, sourced from the logged-in doctor's
+              own profile via getDoctor(user.profileId) — no picker, since
+              this is the doctor's own dashboard. */}
+          {doctorProfileLoading ? (
             <Group gap="xs">
               <Loader size="xs" />
               <Text size="sm" c="dimmed">
                 Loading your profile...
               </Text>
             </Group>
-          ) : patient ? (
+          ) : doctorProfile ? (
             <>
-              <TextInput label="Patient" value={patient.name} readOnly />
+              <TextInput label="Doctor" value={doctorProfile.name} readOnly />
               <Group grow>
-                <TextInput label="Email" value={patient.email} readOnly />
-                <TextInput label="Phone" value={patient.phone} readOnly />
+                <TextInput
+                  label="Department"
+                  value={doctorProfile.department}
+                  readOnly
+                />
+                <TextInput label="Phone" value={doctorProfile.phone} readOnly />
               </Group>
             </>
           ) : (
             <Text size="sm" c="red">
-              Couldn't load your patient profile. Please refresh and try again.
+              Couldn't load your doctor profile. Please refresh and try again.
             </Text>
           )}
 
           <Select
-            label="Doctor"
+            label="Patient"
             required
             placeholder={
-              doctorsLoading ? "Loading doctors..." : "Select a doctor"
+              patientsLoading ? "Loading patients..." : "Select a patient"
             }
-            disabled={doctorsLoading}
+            disabled={patientsLoading}
             nothingFoundMessage={
-              doctorsLoading ? "Loading..." : "No doctors found"
+              patientsLoading ? "Loading..." : "No patients found"
             }
-            data={doctors.map((d) => ({
-              value: String(d.id),
-              label: `${d.name} — ${d.department}`,
+            data={patients.map((p) => ({
+              value: String(p.id),
+              label: p.phone ? `${p.name} — ${p.phone}` : p.name,
             }))}
-            value={scheduleForm.doctorId ? String(scheduleForm.doctorId) : null}
+            value={scheduleForm.patientId ? String(scheduleForm.patientId) : null}
             onChange={(v) =>
               setScheduleForm({
                 ...scheduleForm,
-                doctorId: v ? Number(v) : null,
+                patientId: v ? Number(v) : null,
               })
             }
             searchable
@@ -1198,8 +1155,8 @@ const Appointment = () => {
               setScheduleForm({
                 ...scheduleForm,
                 reasonForVisit: v ?? "",
-                // Clear any previously typed custom text if the patient
-                // switches away from "Other".
+                // Clear any previously typed custom text if switching away
+                // from "Other".
                 customReason: v === OTHER_REASON_VALUE ? scheduleForm.customReason : "",
               })
             }
@@ -1209,7 +1166,7 @@ const Appointment = () => {
 
           {scheduleForm.reasonForVisit === OTHER_REASON_VALUE && (
             <Textarea
-              label="Please describe your reason for visit"
+              label="Please describe the reason for visit"
               required
               placeholder="e.g. Persistent headache for 3 days"
               autosize
@@ -1226,7 +1183,7 @@ const Appointment = () => {
 
           <Textarea
             label="Notes (optional)"
-            placeholder="Anything the doctor should know beforehand"
+            placeholder="Anything worth noting beforehand"
             autosize
             minRows={2}
             value={scheduleForm.notes}
@@ -1246,9 +1203,9 @@ const Appointment = () => {
             <Button
               onClick={handleScheduleSubmit}
               loading={scheduleSubmitting}
-              disabled={patientLoading || !patient}
+              disabled={doctorProfileLoading || !doctorProfile}
             >
-              Schedule
+              Add Appointment
             </Button>
           </Group>
         </Stack>
@@ -1266,7 +1223,7 @@ const Appointment = () => {
           <Stack gap="md">
             <Text size="sm">
               Are you sure you want to cancel the appointment with{" "}
-              <b>{cancelTarget.doctorName}</b> on{" "}
+              <b>{cancelTarget.patientName}</b> on{" "}
               {formatDate(cancelTarget.appointmentDateTime)} at{" "}
               {formatTime(cancelTarget.appointmentDateTime)}?
             </Text>

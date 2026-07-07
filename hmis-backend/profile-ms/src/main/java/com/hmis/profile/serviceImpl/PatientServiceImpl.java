@@ -5,6 +5,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.hmis.profile.dto.PatientDropdown;
 import com.hmis.profile.dto.PatientDto;
 import com.hmis.profile.entity.Patient;
 import com.hmis.profile.exception.HMSException;
@@ -99,6 +101,11 @@ public class PatientServiceImpl implements PatientService {
     @Override
     public Boolean isPatientExists(Long id) throws HMSException {
         return patientRepository.existsById(id);
+    }
+
+    @Override
+    public List<PatientDropdown> getPatientDropdown() throws HMSException {
+        return patientRepository.findAllPatientDropdowns();
     }
 
 }

@@ -32,4 +32,13 @@ const uploadPatientAvatar = async (patientId: any, file: File) => {
     });
 };
 
-export { getPatient, updatePatient, uploadPatientAvatar };
+const getPatientsDropdown = async () => {
+  return axiosInstance
+    .get(`/profile/patient/dropdown`)
+    .then((response: any) => response.data)
+    .catch((error: any) => {
+      throw error;
+    });
+};
+
+export { getPatient, updatePatient, uploadPatientAvatar, getPatientsDropdown };
